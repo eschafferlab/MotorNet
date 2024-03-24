@@ -2,9 +2,7 @@ import torch as th
 from collections.abc import Sequence
 from torch.nn.parameter import Parameter
 
-
 DEVICE = th.device("cpu")
-
 
 class Skeleton(th.nn.Module):
   """Base class for `Skeleton` objects.
@@ -53,10 +51,10 @@ class Skeleton(th.nn.Module):
     self.output_dim = kwargs.get('output_dim', self.state_dim)
 
     device = self.device if device is None else device
-    self.pos_lower_bound = Parameter(th.as_tensor(pos_lower_bound, dtype=th.float32, device=device).expand(dof), requires_grad=False)
-    self.pos_upper_bound = Parameter(th.as_tensor(pos_upper_bound, dtype=th.float32, device=device).expand(dof), requires_grad=False)
-    self.vel_lower_bound = Parameter(th.as_tensor(vel_lower_bound, dtype=th.float32, device=device).expand(dof), requires_grad=False)
-    self.vel_upper_bound = Parameter(th.as_tensor(vel_upper_bound, dtype=th.float32, device=device).expand(dof), requires_grad=False)
+    self.pos_lower_bound = Parameter(th.as_tensor(pos_lower_bound, dtype=th.float32, device=device).expand(dof).clone(), requires_grad=False)
+    self.pos_upper_bound = Parameter(th.as_tensor(pos_upper_bound, dtype=th.float32, device=device).expand(dof).clone(), requires_grad=False)
+    self.vel_lower_bound = Parameter(th.as_tensor(vel_lower_bound, dtype=th.float32, device=device).expand(dof).clone(), requires_grad=False)
+    self.vel_upper_bound = Parameter(th.as_tensor(vel_upper_bound, dtype=th.float32, device=device).expand(dof).clone(), requires_grad=False)
 
     self.built = False
 
@@ -95,10 +93,10 @@ class Skeleton(th.nn.Module):
         degrees-of-freedom arm, we would have `n=2`.
     """
     
-    if pos_upper_bound is not None: self.pos_upper_bound.data = th.as_tensor(pos_upper_bound, dtype=th.float32, device=self.device).expand(self.dof)
-    if pos_lower_bound is not None: self.pos_lower_bound.data = th.as_tensor(pos_lower_bound, dtype=th.float32, device=self.device).expand(self.dof)
-    if vel_upper_bound is not None: self.vel_upper_bound.data = th.as_tensor(vel_upper_bound, dtype=th.float32, device=self.device).expand(self.dof)
-    if vel_lower_bound is not None: self.vel_lower_bound.data = th.as_tensor(vel_lower_bound, dtype=th.float32, device=self.device).expand(self.dof)
+    if pos_upper_bound is not None: self.pos_upper_bound.data = th.as_tensor(pos_upper_bound, dtype=th.float32, device=self.device).expand(self.dof).clone()
+    if pos_lower_bound is not None: self.pos_lower_bound.data = th.as_tensor(pos_lower_bound, dtype=th.float32, device=self.device).expand(self.dof).clone()
+    if vel_upper_bound is not None: self.vel_upper_bound.data = th.as_tensor(vel_upper_bound, dtype=th.float32, device=self.device).expand(self.dof).clone()
+    if vel_lower_bound is not None: self.vel_lower_bound.data = th.as_tensor(vel_lower_bound, dtype=th.float32, device=self.device).expand(self.dof).clone()
     self.dt = timestep
     self.clip_position = lambda x: self.clip(x, self.pos_lower_bound, self.pos_upper_bound)
     self.built = True
