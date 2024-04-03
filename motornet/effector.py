@@ -101,7 +101,7 @@ class Effector(th.nn.Module):
     # geometry Parameters
     self.path_fixation_body = Parameter(th.empty((1, 1, 0), dtype=th.int, device=device), requires_grad=False)
     self.path_coordinates = Parameter(th.empty((1, self.space_dim, 0), dtype=th.float32, device=device), requires_grad=False)
-    self.muscle_transitions = Parameter(th.empty((1, 1, 0), dtype=th.int, device=device), requires_grad=False)
+    self.muscle_transitions = Parameter(th.empty((1, 1, 0), dtype=th.bool, device=device), requires_grad=False)
     self.section_splits = Parameter(th.empty(0, dtype=th.int, device=device), requires_grad=False)
     self._muscle_config_is_empty = True
 
@@ -229,11 +229,13 @@ class Effector(th.nn.Module):
       raise ValueError(f'The model dimensionality is {self.space_dim}, but the `path_coordinates` argument is in {path_coordinates_new.shape[1]}d.')
     if path_coordinates_new.shape[2] != n_points:
       raise ValueError(f'Number of points in argument `path_fixation_body` ({n_points}) must match number in `path_coordinates` ({path_coordinates_new.shape[2]}).')
-    one, zeros = th.ones(1, dtype=th.int, device=self.device), th.zeros(n_points - 1, dtype=th.int, device=self.device)
+    one, zeros = th.ones(1, dtype=th.bool, device=self.device), th.zeros(n_points - 1, dtype=th.bool, device=self.device)
     muscle_transitions_new = (zeros if self.n_muscles == 1 else th.cat([one, zeros])).reshape(1, 1, -1)
-    section_splits_new = th.empty(1, dtype=th.int, device=self.device).fill_(n_points)
+    section_splits_new = th.empty(1, dtype=th.int, device=self.device).fill_(n_points - 1)
 
     # update Parameters
+    if self.n_muscles > 1:
+      self.section_splits.data[-1] += 1
     for param, new_data in zip(
       [self.path_fixation_body, self.path_coordinates, self.muscle_transitions, self.section_splits],
       [path_fixation_body_new, path_coordinates_new, muscle_transitions_new, section_splits_new]
@@ -269,8 +271,8 @@ class Effector(th.nn.Module):
     cfg = {}
     for m, (n_points, fixation_body, coordinates) in enumerate(zip(
       self.section_splits,
-      self.path_fixation_body.split(self.section_splits, dim=-1),
-      self.path_coordinates.split(self.section_splits, dim=-1)
+      self.path_fixation_body.split(self.section_splits.tolist(), dim=-1),
+      self.path_coordinates.split(self.section_splits.tolist(), dim=-1)
     )):
       d = {
         "n_fixation_points": n_points,
@@ -353,9 +355,9 @@ class Effector(th.nn.Module):
     # NOTE 2: It seems for-loops are faster than tensorflow's ragged tensor approach, even for a large number of 
     # muscles. If this is also true for PyTorch's final implementation of a nested tensor then maybe we will want to
     # stick with the current approach.
-    musculotendon_len_as_list = [th.sum(y, dim=-1) for y in segment_len_cleaned.split(self.section_splits, dim=-1)]
-    musculotendon_vel_as_list = [th.sum(y, dim=-1) for y in segment_vel_cleaned.split(self.section_splits, dim=-1)]
-    moment_arms_as_list = [th.sum(y, dim=-1) for y in segment_mom_cleaned.split(self.section_splits, dim=-1)]
+    musculotendon_len_as_list = [th.sum(y, dim=-1) for y in segment_len_cleaned.split(self.section_splits.tolist(), dim=-1)]
+    musculotendon_vel_as_list = [th.sum(y, dim=-1) for y in segment_vel_cleaned.split(self.section_splits.tolist(), dim=-1)]
+    moment_arms_as_list = [th.sum(y, dim=-1) for y in segment_mom_cleaned.split(self.section_splits.tolist(), dim=-1)]
 
     # bring back into a single tensor
     musculotendon_len = th.stack(musculotendon_len_as_list, dim=-1)
