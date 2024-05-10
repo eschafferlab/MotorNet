@@ -250,6 +250,7 @@ class Environment(gym.Env, th.nn.Module):
     self.effector.reset(seed=seed, options={"batch_size": batch_size, "joint_state": joint_state})
     self.goal = self._get_goal(self.effector.batch_size)
     self.reward_offset = th.zeros(batch_size, 1)
+    self.num_goals_reached = th.zeros(batch_size, 1)
     self.elapsed = 0.
 
     # initialize buffer
